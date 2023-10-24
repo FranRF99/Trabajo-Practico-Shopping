@@ -1,0 +1,1483 @@
+import getpass
+import os
+import pickle
+import os.path
+import datetime 
+from datetime import datetime
+
+
+"""usuarios cargados en el archivo usuarios.dat:
+    dueño- usuario: pepe | clave: 123 
+    cliente- usuario: tito |  clave: 123 
+    ----------
+    Local creado en locales.dat- kfc (local 1) | ubicacion: piso 1 | rubro: comida | codigo de dueño:2 (pepe)
+    Promocion asignada a local 1(promociones.dat)- texto: 2x1 en productos seleccionados | estado: aprobada | fecha desde: 08-10-2023 | fecha hasta:31-10-2023| habilitada todos los dias menos los dias viernes y sabado
+    Uso de promocion(uso_promociones.dat)- codigo de cliente:3 | codigo promo: 1 | fecha uso: 08-10-2023 """
+
+#registros
+class usuarios:
+    def __init__(self):
+        self.codUsuario= 0
+        self.nombreUsuario= "".ljust(100," ")
+        self.claveUsuario= "".ljust(8," ")
+        self.tipoUsuario= "".ljust(20," ")
+        
+class locales:
+    def __init__(self):
+        self.codlocal=0
+        self.nombreLocal= "".ljust(50," ")
+        self.ubicacionLocal= "".ljust(50," ")
+        self.rubroLocal= "".ljust(50," ")
+        self.codUsuario= 0
+        self.estado="".ljust(1," ")
+        
+class promociones:
+    def __init__(self):
+        self.codPromo=0
+        self.textoPromo="".ljust(200," ")
+        self.fechaDesdePromo  = ''
+        self.fechaHastaPromo = ''
+        self.Estado = "".ljust(10," ")
+        self.dias= [""]*7
+        self.codLocal = 0
+        
+class usoPromociones:
+    def __init__(self ):
+        self.codCliente = 0
+        self.codPromo = 0
+        self.fechaUsoPromo = '' 
+
+class RUBROS:
+     def __init__(self ):
+         self.rub= ""
+         self.cant=0
+ 
+#ARCHIVOS 
+direccion= "C:\\tp3\\"
+
+if not os.path.exists(direccion):
+    os.mkdir(direccion)
+
+AFUS= "C:\\tp3\\usuarios.dat"
+if not os.path.exists(AFUS):
+    ALUS= open(AFUS, "w+b")
+else:
+    ALUS=open(AFUS,"r+b")
+
+AFL= "C:\\tp3\\locales.dat"
+if not os.path.exists(AFL):
+    ALL= open(AFL, "w+b")
+else:
+    ALL=open(AFL,"r+b")
+
+AFPR= "C:\\tp3\\promociones.dat"
+if not os.path.exists(AFPR):
+    ALPR= open(AFPR, "w+b")
+else:
+    ALPR=open(AFPR,"r+b")
+
+AFUSO= "C:\\tp3\\uso_promociones.dat"
+if not os.path.exists(AFUSO):
+    ALUSO= open(AFUSO, "w+b")
+else:
+    ALUSO=open(AFUSO,"r+b")
+    
+
+
+#-------------------------------------------------
+
+def calculo(rub):
+    rub=rub.ljust(50," ")
+    tot=0
+    t=os.path.getsize(AFL)
+    ALL.seek(0)
+    while ALL.tell() < t:
+        RL=pickle.load(ALL) 
+        if RL.rubroLocal == rub:
+            tot=tot + 1
+    return tot
+
+def MENUINICIAL():
+    global op
+    limpiar()
+    linea()
+    print("\n-MENU INICIAL-")
+    print("\n1. Ingresar como usuario registrado")
+    print("2. Registrarse como cliente")
+    print("3. Salir")
+    linea()
+    op=input("ingrese una opcion [1-3]:")
+    while validar(op,1,3):
+        op=input("opcion invalida, ingrese una opcion [1-3]:")
+    op=int(op)
+    
+def limpiar():
+    os.system("cls")
+    
+def linea():
+    print("----------------------------------")
+    
+def MENUADMIN():
+    global opadmin
+    limpiar()
+    linea()
+    print("-Menu principal de administrador-")
+    print("\n1. Gestion de locales")
+    print("2. Crear cuentas de dueños de locales")
+    print("3. Aprobar / Denegar solicitud de descuento")
+    print("4. Gestion de novedades")
+    print("5. Reporte de utilizacion de descuentos")
+    print("0. Salir")
+    linea()
+    opadmin = input("Ingrese una opción [0-5]: ")
+    while validar(opadmin, 0, 5):
+        opadmin = input("Opción inválida. Ingrese una opción [0-5]: ")
+    opadmin=int(opadmin)
+
+def GESTIONLOCALES():
+    limpiar()
+    linea()
+    print ("\nGestion de locales")
+    # Mostrar el submenú de gestión de locales
+    print("\nSubmenu de gestion de locales:")
+    print("a) Crear locales")
+    print("b) Modificar local")
+    print("c) Eliminar local")
+    print("d) Mapa de locales")
+    print("e) Volver")
+    linea()
+    
+def MENUDUENO():
+    global opdue
+    limpiar()
+    linea()
+    print("-Menu principal de dueño-")
+    print("\n1. Crear descuento")
+    print("2. Reporte de descuentos")
+    print("3. Ver novedades") #solo en chapin
+    print("0. Salir")
+    linea()
+    opdue=input("ingrese una opcion[0-3]: ")
+    while validar(opdue,0,3):
+        opdue=input("opcion invalida, ingrese una opcion [0-3]: ")
+    opdue=int(opdue)
+    
+def MENUCLIEN():
+    global opcli
+    limpiar()
+    linea()
+    print("-Menu principal de cliente-")
+    print("\n1. Buscar descuentos en local")
+    print("2. Solicitar descuento")
+    print("3. Ver novedades")
+    print("0. Salir")
+    linea()
+    opcli = input("Elige una opcion[0-3]: ")
+    while validar(opcli, 0, 3):
+        opcli=input("opcion invalida, ingrese una opcion [0-3]:")
+    opcli=int(opcli)
+    
+def validar(nro, desde, hasta):
+    try: 
+        int(nro)
+        if int(nro) >= desde and int(nro) <= hasta:
+            return False
+        else :
+            return True
+    except: 
+        return True
+
+def MOSLISTA():
+    rta = input("Desea ver la lista de locales creados hasta el momento? (si/no) ")
+    while rta != 'si' and rta != 'no':
+        rta = input("Respuesta incorrecta, ingrese nuevamente (si/no): ")
+    if rta == 'si':
+        t = os.path.getsize(AFL)
+        if t == 0:
+            print('No hay locales creados...')
+        else:
+            ORDENARLOC()
+            ALL.seek(0)
+            while ALL.tell() < t:
+                RL = pickle.load(ALL)
+                LISLOCALS(RL)
+            print()
+                 
+
+def MOSTARUSUARIO():
+    os.system("cls")
+    print("-usuario-")
+    print("codigo de usuario: ", RUS.codUsuario)
+    print("nombre de usuario: ", RUS.nombreUsuario)
+    print("tipo de usuario: ", RUS.tipoUsuario)
+
+def CREARDUENOS():
+    limpiar()
+    tamarch = os.path.getsize(AFUS)
+    tamreg = TAMAÑO()
+    print("-Crear cuentas de dueños de locales-")
+    nuevodue = input("\nIngrese el mail del nuevo dueño de local <hasta 100 caracteres> o * para volver al menu de opciones: ")
+    while len(nuevodue) < 1 or len(nuevodue) > 100:
+        nuevodue = input("Cantidad de caracteres inválida, ingrese mail nuevamente <hasta 100 caracteres> o * para volver al menu de opciones: ")
+    nuevodue=nuevodue.ljust(100," ")
+    posi = VAL(nuevodue)
+    while posi != -1 and nuevodue != "*".ljust(100," "):
+        nuevodue = input("Ese mail ya existe en el sistema, ingrese otro o * para volver al menu de opciones: ")
+        nuevodue=nuevodue.ljust(100," ")
+        posi = VAL(nuevodue)
+    if nuevodue != "*".ljust(100," "):
+        cantreg = tamarch // tamreg
+        ALUS.seek(tamarch,0)
+        RUS.codUsuario = cantreg + 1
+        RUS.nombreUsuario = nuevodue
+        condue = input("Ingrese clave de la cuenta <hasta 8 caracteres>: ")
+        while len(condue) < 1 or len(condue) > 8:
+            condue = input("Clave inválida, ingrese clave nuevamente <hasta 8 caracteres>: ")
+        RUS.claveUsuario = condue
+        RUS.tipoUsuario = "dueño de local"   
+        FORMATEO()     
+        pickle.dump(RUS, ALUS)
+        ALUS.flush()
+        MOSTARUSUARIO()
+        print("\n-Dueño registrado exitosamente-")
+    os.system("pause")
+
+def DICOLOC(nomloc):
+    global AFL,ALL,RL
+    Tarc=os.path.getsize(AFL)
+    if Tarc == 0:
+        return -1
+    else:
+        ALL.seek(0)
+        RL=pickle.load(ALL)
+        Treg=ALL.tell()
+        cant=Tarc//Treg
+        ini=0
+        fin=cant-1
+        BA=0
+        while ini <= fin and BA==0:
+            med=(ini+fin)//2
+            ALL.seek(med*Treg,0)
+            RL=pickle.load(ALL)
+            if RL.nombreLocal == nomloc:
+                BA=1
+            elif RL.nombreLocal<nomloc:
+                ini=med + 1
+            else:
+                fin=med-1
+        if BA==1:
+            return med*Treg
+        else:
+            return -1
+    
+def BUSDUE(coddue, tipo):
+    global AFUS, ALUS
+    f = os.path.getsize(AFUS)
+    m=False
+    ALUS.seek(0)
+    while ALUS.tell() < f and m==False:
+        pos = ALUS.tell()
+        RUS = pickle.load(ALUS)
+        if RUS.codUsuario == coddue and RUS.tipoUsuario == tipo:
+            m=True
+    if m:
+        return pos
+    else:
+        return -1
+
+def TAMAÑOLOC():
+    ALL.seek(0)
+    pickle.load(ALL)
+    t=ALL.tell()
+    return t
+
+def MOSTRARLOC(RL):
+    print("Codigo de local: ", RL.codlocal)
+    print("Nombre de local: ",RL.nombreLocal)
+    print("Ubicacion: ",RL.ubicacionLocal)
+    print("Rubro: ",RL.rubroLocal)
+    print("Codigo del dueño: ",RL.codUsuario)
+    if RL.estado == "A":
+        print("Estado:""\033[32m",RL.estado,"\033[0m")
+    else: 
+        print("Estado:""\033[31m",RL.estado,"\033[0m")
+    
+def FORMATEOLOC(RL):
+    RL.nombreLocal=RL.nombreLocal.ljust(50," ")
+    RL.rubroLocal=RL.rubroLocal.ljust(50," ")
+    RL.ubicacionLocal=RL.ubicacionLocal.ljust(50," ")
+    RL.estado=RL.estado.ljust(1," ")
+    
+# ------- LISTADO LOCALES -----------
+
+def LISLOCALS(RL):
+    linea()
+    print("Codigo de local: ", RL.codlocal)
+    print("Nombre de local: ",RL.nombreLocal)
+    print("Ubicacion: ",RL.ubicacionLocal)
+    print("Rubro: ",RL.rubroLocal)
+    print("Codigo del dueño: ",RL.codUsuario)
+    if RL.estado == "B":
+        print("Estado:""\033[31m",RL.estado,"\033[0m")
+    else : 
+        print("Estado: ","\033[32m",RL.estado,"\033[0m")
+    linea()
+
+# ------- ORDENAR LOCAL POR NOMBRE --------
+def ORDENARLOC():
+    global ALL
+    ALL.seek(0)
+    aux = pickle.load(ALL)
+    tamreg = ALL.tell()
+    tamarch = os.path.getsize(AFL)
+    cantreg = tamarch // tamreg
+    for i in range(0, cantreg-1):
+        for j in range(i+1, cantreg):
+            ALL.seek(i*tamreg, 0)
+            auxi = pickle.load(ALL)
+            ALL.seek(j*tamreg,0)
+            auxj = pickle.load(ALL)
+            if (auxi.nombreLocal > auxj.nombreLocal):
+                ALL.seek(i*tamreg, 0)
+                pickle.dump(auxj, ALL)
+                ALL.seek(j*tamreg, 0)
+                pickle.dump(auxi, ALL)
+
+def ORDENARRUB(rubros,t):
+    for p in range(0, t):
+        for l in range(p, t-1):
+            if rubros[p].cant < rubros[l].cant:
+                aux = rubros[p]
+                rubros[p] = rubros[l]
+                rubros[l] = aux    
+    return rubros
+
+def EDUE():
+    t=os.path.getsize(AFUS)
+    c=0
+    ALUS.seek(0)
+    while ALUS.tell()<t and c==0:
+        RUS=pickle.load(ALUS)
+        if RUS.tipoUsuario == ("dueño de local".ljust(20," ")):
+            c=1
+    if c==0:
+        return -1
+    else:
+        return c
+    
+def CREARLOCALES():
+    global rubros,ALL
+    os.system("cls")
+    print("- CREAR LOCALES -")
+    exisdue=EDUE()
+    if exisdue != -1:
+        MOSLISTA()
+        nomloc=input("\n\ningrese el nombre del local o * para terminar [50 caracteres max]: ")
+        while len(nomloc)<1 or len(nomloc)>50:
+            nomloc=input("-invalido- ingrese un nombre de local o * para terminar carga [50 caracteres max]: ")
+        nomloc=nomloc.ljust(50," ")
+        pos = DICOLOC(nomloc)
+        while pos != -1 and nomloc!="*".ljust(50," "):
+            nomloc=input("ese nombre de local ya existe en el sistema, pruebe con otro o * para terminar carga [50 caracteres max]:  ")
+            while len(nomloc)<1 and len(nomloc)>50:
+                nomloc=input("-invalido- ingrese un nombre de local o * para terminar carga [50 caracteres max]: ")
+            nomloc=nomloc.ljust(50," ")
+            pos = DICOLOC(nomloc)
+        while nomloc!="*".ljust(50," "):
+            ubi=input("ingrese ubicacion del local [50 caracteres max]: ")
+            while len(ubi)<1 or len(ubi)>50: 
+                ubi=input("ingrese ubicacion valida [50 caracteres max]: ")
+            rub=input("ingrese rubro de local [indumentaria, perfumeria o comida]: ")
+            while rub != "indumentaria" and rub!= "perfumeria" and rub !="comida":
+                rub=input("-rubro invalido-. Ingrese un rubro de local valido [indumentaria, perfumeria o comida]: ")
+            coddue=input("ingrese el codigo del dueño del local: ")
+            while validar(coddue,0,10000000000000):     
+                coddue=input("valor de codigo invalido  - ingrese cod: ")    
+            coddue = int(coddue)
+            tipo = "dueño de local".ljust(20," ")
+            valcod=BUSDUE(coddue, tipo)
+            while valcod == -1 and coddue != 0:             #si el cod no existe o no corresponde a un dueño
+                coddue=input("-codigo invalido- ingrese nuevo codigo de dueño o 0 para seguir con otro local: ")
+                while validar(coddue,0,10000000000000):     #10000000 como para poner un entero max no sabemos si hay un tope de usuarios en el sistema, si fuera asi va ese nro
+                    coddue=input("valor de codigo invalido - ingrese cod: ")    
+                coddue = int(coddue)
+                valcod=BUSDUE(coddue, tipo)
+                
+            if valcod != -1:
+                print("-dueño valido-")
+                rta=input("confirma la creación del local? (si/no): ")
+                if rta == "si":
+                    tamarchloc=os.path.getsize(AFL)
+                    if tamarchloc == 0:
+                        cantloc=0                          #calcula codigo local 
+                    else:
+                        tamregloc=TAMAÑOLOC()
+                        cantloc=tamarchloc//tamregloc
+                    ALL.seek(tamarchloc,0)
+                    RL.nombreLocal=nomloc      #asigna los datos
+                    RL.ubicacionLocal=ubi
+                    RL.rubroLocal=rub
+                    RL.codUsuario=coddue
+                    RL.estado="A"
+                    RL.codlocal= cantloc + 1
+                    FORMATEOLOC(RL)
+                    pickle.dump(RL,ALL) #los guarda
+                    ALL.flush()
+                    limpiar()
+                    print("-nuevo local-")
+                    MOSTRARLOC(RL)
+                    print("\n-local registrado exitosamente-")
+                    for s in range (3):
+                        if rub==rubros[s].rub:
+                            rubros[s].cant = rubros[s].cant + 1   
+                    ORDENARRUB(rubros,3)          #calcula cant de locales por rubro
+                    print("\n Cantidad de locales por rubro:")
+                    for i in range (3):
+                        print("Rubro:", rubros[i].rub.ljust(30," "),"Cantidad de locales:", rubros[i].cant)
+            ORDENARLOC()            
+            nomloc=input("\nIngrese otro nombre del local o * para terminar: ")
+            while len(nomloc)<1 or len(nomloc)>50:
+                nomloc=input("-invalido- ingrese un nombre de local o * para terminar carga [50 caracteres max]: ")
+            nomloc=nomloc.ljust(50," ")
+            pos = DICOLOC(nomloc)
+            while pos!=-1 and nomloc!="*":
+                nomloc=input("ese nombre de local ya existe en el sistema, pruebe con otro o * para terminar carga:  ")
+                while len(nomloc)<1 or len(nomloc)>50:
+                    nomloc=input("-invalido- ingrese un nombre de local o * para terminar carga [50 caracteres max]: ")
+                nomloc=nomloc.ljust(50," ")
+                pos = DICOLOC(nomloc)
+    else:
+        print("no existe ningun dueño de local en el archivo - cree el usuario de dueño antes de crear los locales")
+        os.system("pause")
+
+def BUSCODLOC(codl):
+    t = os.path.getsize(AFL)
+    P=False
+    ALL.seek(0)
+    while ALL.tell() < t and P==False:
+        pos = ALL.tell()
+        RL = pickle.load(ALL)
+        if RL.codlocal == codl:
+            P=True
+    if P:
+        return pos
+    else:
+        return -1
+    
+# ------------- ELIMINAR LOCAL -------------------------------
+def ELIMINARLOCAL():
+    global rubros,ALL
+    os.system("cls")
+    print("\n\n- ELIMINAR LOCALES -")
+    MOSLISTA()
+    t = os.path.getsize(AFL)
+    if t == 0:
+        print("No hay locales registrados...")
+        os.system('pause')
+    else:
+        codl=input("\n\nIngrese el codigo de local que desea eliminar o 0 para terminar: ")
+        while validar(codl,0,100000):
+            codl=input("Incorrecto, ingrese nuevamente el codigo de local o 0 para terminar: ")
+        codl = int(codl) 
+        if codl != 0:
+            pos = BUSCODLOC(codl)
+            while pos == -1 and codl != 0:
+                codl=input("-El codigo de local ingresado no existe en el sistema-, intente con otro o ingrese 0 para volver al menu de opciones..")
+                while validar(codl,0,100000):
+                    codl=input("Incorrecto, ingrese nuevamente el codigo de local o 0 para volver al menu de opciones: ")
+                codl = int(codl) 
+                pos = BUSCODLOC(codl)
+            if codl != 0:
+                ALL.seek(pos,0)
+                RL=pickle.load(ALL)
+                if RL.estado == 'B':
+                    print("\n-El local ya esta dado de baja-")
+                else:
+                    print("\nInformacion del local que desea dar de baja: ")
+                    MOSTRARLOCMOD(RL)
+                    rta = input("Confirma la baja del local? (ingresar 'si' para confirmar o 'no' para cancelar): ")
+                    while rta != 'si' and rta != 'no':
+                        rta = input("Incorrecto, ingrese nuevamente ('si' para confirmar o 'no' para cancelar): ")
+                    if rta == 'si':
+                        rubr=RL.rubroLocal.strip()
+                        for s in range (3):
+                            if rubr == rubros[s].rub:
+                                rubros[s].cant = rubros[s].cant - 1  
+                        ORDENARRUB(rubros,3)
+                        RL.estado = "B"
+                        ALL.seek(pos,0)
+                        FORMATEOLOC(RL)
+                        pickle.dump(RL, ALL)
+                        ALL.flush()
+                        print("Local eliminado exitosamente")
+                        print("\nDatos acualizados del local: ")
+                        MOSTRARLOCMOD(RL)
+                        print("\nCantidad de locales por rubro:")
+                        for i in range (3):
+                            print("Rubro:", rubros[i].rub,"    Cantidad de locales:", rubros[i].cant)
+            
+            os.system('pause')
+             
+
+def MOSTRARLOCMOD(RL):
+    print("Codigo de local: ", RL.codlocal)
+    print("Nombre de local: ",RL.nombreLocal)
+    print("Ubicacion: ",RL.ubicacionLocal)
+    print("Rubro: ",RL.rubroLocal)
+    print("Codigo del dueño: ",RL.codUsuario)
+    if RL.estado == "B":
+        print("Estado:""\033[31m",RL.estado,"\033[0m")
+    else : 
+        print("Estado: ","\033[32m",RL.estado,"\033[0m")
+    
+
+def MODIFICARLOCAL():
+    global rubros, ALL
+    os.system("cls")
+    print('\n- MODIFICAR -')
+    MOSLISTA()
+    t = os.path.getsize(AFL)
+    if t == 0:
+        print("No hay locales registrados...")
+        os.system("pause")
+    else:
+        codl = input('\n\nIngrese el codigo de local que desea modificar o 0 para terminar: ')
+        while validar(codl, 0, 100000):
+            codl=input("Codigo incorrecto, ingrese cod o 0 para terminar: ")
+        codl = int(codl)
+        while codl != 0:
+            pos = BUSCODLOC(codl)
+            while pos == -1 and codl != 0:
+                codl=input("\nNo se encontro ningun local con ese codigo, ingrese otro o 0 para terminar:")
+                while validar(codl, 0, 100000):
+                    codl=input("Codigo incorrecto, ingrese cod o 0 para terminar: ")
+                codl = int(codl)
+                pos = BUSCODLOC(codl)
+            else:
+                ALL.seek(pos, 0)
+                RL = pickle.load(ALL)
+                if RL.estado == 'B':
+                    op = input("\nEl local esta dado de baja, desea activarlo? (si/no): ")
+                    while op != 'si' and op != 'no':
+                        op = input("opcion invalida, ingrese nuevamente (si/no): ")
+                    if op == 'si':
+                        ALL.seek(pos,0)
+                        RL.estado='A'.ljust(1," ")
+                        pickle.dump(RL,ALL)
+                        ALL.flush()
+                else: 
+                    print('\n Local a modificar: ')
+                    linea()
+                    MOSTRARLOCMOD(RL)
+                    linea()
+                    print("\nDatos que puede modificar del local: \n")
+                    print("1. Nombre ")
+                    print("2. Ubicacion ")
+                    print("3. Rubro ")
+                    print("0. Salir")
+                    opmod = input('\nIngrese la opcion que desea modificar o 0 para terminar: ')
+                    while validar(opmod,0,3):
+                        opmod= input('Opcion incorrecta, ingrese nuevamente la opcion: ')
+                    opmod = int(opmod)
+                    if opmod != 0:
+                        if opmod == 1:
+                            nomnue= input("Ingrese el nuevo nombre de Local [50 caracteres max]: ")
+                            while len(nomnue)<1 or len(nomnue)>50:
+                                nomnue=("-invalido- ingrese un nombre de local o * para terminar carga [50 caracteres max]: ")
+                            nomnue=nomnue.ljust(50," ")
+                            while DICOLOC(nomnue)!=-1:
+                                nomnue=input("ese nombre de local ya existe en el sistema, pruebe con otro o * para terminar carga [50 caracteres max]:  ")
+                                while len(nomnue)<1 or len(nomnue)>50:
+                                    nomnue=("-invalido- ingrese un nombre de local o * para terminar carga [50 caracteres max]: ")
+                                    nomnue=nomnue.ljust(50," ")
+                            rtamod = input('Confirma? (si/no): ')
+                            while rtamod != 'si' and rtamod != 'no':
+                                rtamod = input('Opcion incorrecta (si/no): ')
+                            if rtamod == 'si':
+                                ALL.seek(pos,0)
+                                RL.nombreLocal = nomnue
+                                pickle.dump(RL, ALL)
+                                ALL.flush()
+                                ORDENARLOC()
+                                print('modificacion exitosa.')
+                        elif opmod == 2:
+                            ubinue = input("Ingrese la nueva ubicacion [50 caracteres max]:")
+                            while len(ubinue)<1 or len(ubinue)>50:
+                                    ubinue=("-invalido- ingrese la ubicacion de local [50 caracteres max]: ")
+                            ubinue=ubinue.ljust(50," ")
+                            rtamod = input('Confirma? (si/no): ')
+                            while rtamod != 'si' and rtamod != 'no':
+                                rtamod = input('Opcion incorrecta (si/no): ')
+                            if rtamod == 'si':
+                                ALL.seek(pos,0)
+                                RL.ubicacionLocal = ubinue
+                                pickle.dump(RL, ALL)
+                                ALL.flush()
+                                print('modificacion exitosa.')
+                
+                        elif opmod == 3:
+                            rubnue = input('Ingrese el nuevo rubro de local [indumentaria, perfumeria o comida]:  ')
+                            while rubnue != "indumentaria" and rubnue!= "perfumeria" and rubnue !="comida":
+                                rubnue=input("-rubro invalido-. Ingrese un rubro de local valido [indumentaria, perfumeria o comida]: ")
+                            rubnue=rubnue.ljust(50," ")
+                            rtamod = input('Confirma? (si/no): ')
+                            while rtamod != 'si' and rtamod != 'no':
+                                rtamod = input('Opcion incorrecta (si/no): ')
+                            if rtamod == 'si':
+                                for s in range (3):
+                                    if rubnue.strip()==rubros[s].rub:
+                                        rubros[s].cant = rubros[s].cant + 1 
+                                for m in range (3):
+                                    if RL.rubroLocal.strip() ==rubros[m].rub:
+                                        rubros[m].cant = rubros[m].cant - 1 
+                                ORDENARRUB(rubros,3)
+                                ALL.seek(pos,0)
+                                RL.rubroLocal = rubnue
+                                pickle.dump(RL, ALL)
+                                ALL.flush()
+                                print("\n Cantidad de locales por rubro:")
+                                for i in range (3):
+                                    print("Rubro:", rubros[i].rub,"    Cantidad de locales:", rubros[i].cant)
+                                print('modificacion exitosa.')
+
+                        MOSTRARLOCMOD(RL)
+                        codl = input('\nSi desea modificar otro local, ingrese el codigo del local que desea modificar o 0 para terminar: ')
+                        while validar(codl, 0, 100000):
+                                print ("Codigo incorrecto, ingrese codigo de local o 0 para teminar: ")
+                        codl = int(codl) 
+                    else:
+                        codl=0
+
+def MAPALOCALES():
+    print("-Mapa de locales-")
+    print("(los locales activos figuran en verde y los dados de baja en rojo)")
+    tarl=os.path.getsize(AFL)
+    treg=TAMAÑOLOC()
+    cantloc=tarl//treg
+    ALL.seek(0)
+    r=0
+    while ALL.tell() < tarl:
+        canti=0
+        print("+---+---+---+---+---+")
+        while canti<5 and ALL.tell()<tarl:
+                RL=pickle.load(ALL)
+                if canti <4:
+                    if RL.estado == "B":
+                        if RL.codlocal < 10:
+                            print("\033[31m"+"|"+ "0"+str(RL.codlocal)+"|"+"\033[0m",end="")
+                        else:
+                            print("\033[31m"+"|"+str(RL.codlocal)+"|""+\033[0m")
+                    else:
+                        if RL.codlocal < 10:
+                            print("\033[32m"+"|"+ "0"+str(RL.codlocal)+"|"+"\033[0m",end="")
+                        else:
+                            print("\033[0;32m"+"|" + str(RL.codlocal)+ "|""\033[0m")
+                else:
+                    if RL.estado =="B":
+                        if RL.codlocal < 10:
+                            print("\033[31m"+"|"+"0"+str(RL.codlocal)+"\033[0m""|",end="")
+                        else:
+                            print("\033[31m"+"|"+str(RL.codlocal)+"\033[0m""|")
+                    else:
+                        if RL.codlocal < 10:
+                            print("\033[32m"+"|"+"0"+str(RL.codlocal)+"\033[0m""|",end="")
+                        else:
+                            print("\033[32m"+"|"+str(RL.codlocal)+"\033[0m""|")
+                canti=canti + 1
+        if canti == 5:
+            r=r +1
+        if canti<5:
+            s = 5 - canti
+            if s == 5:
+                print("|"+"00"+"|"+"|"+"00"+"|"+"|"+"00"+"|"+"|"+"00"+"|"+"|"+"00"+"|")
+            elif s == 4:
+                print("|"+"00"+"|"+"|"+"00"+"|"+"|"+"00"+"|"+"|"+"00"+"|")
+            elif s == 3:
+                print("|"+"00"+"|"+"|"+"00"+"|"+"|"+"00"+"|")
+            elif s== 2:
+                print("|"+"00"+"|"+"|"+"00"+"|")
+            elif s== 1:
+                print("|"+"00"+"|")
+            r=r + 1     
+    print("+---+---+---+---+---+")   
+    for t in range (10 - r):
+        print("|"+"00"+"|"+"|"+"00"+"|"+"|"+"00"+"|"+"|"+"00"+"|"+"|"+"00"+"|")
+        print("+---+---+---+---+---+")
+    
+    if cantloc > 50:
+        print("\nproximamente se habilitara un mapa con los demas locales...")
+    
+    os.system("pause")
+
+def LISPEND():
+    tp=os.path.getsize(AFPR)
+    ALPR.seek(0)
+    while ALPR.tell()<tp:
+        PROM=pickle.load(ALPR)
+        if PROM.Estado== "pendiente".ljust(10," "):
+            print("--------------------")
+            print("Codigo de local:", PROM.codLocal)
+            print("Codigo de promocion: ",PROM.codPromo)
+            print("Texto: ",PROM.textoPromo)
+            print("Fecha desde: ",PROM.fechaDesdePromo)
+            print("Fecha hasta: ",PROM.fechaHastaPromo)
+            print("dias vigentes [1 esta vigente - 0 no lo esta]:", "| Lunes:",PROM.dias[0],"| Martes:",PROM.dias[1],"| Miercoles:",PROM.dias[2],"| Jueves:",PROM.dias[3],"| Viernes:",PROM.dias[4],"| Sabado:",PROM.dias[5],"| Domingo:",PROM.dias[6],"|")
+            print("estado: ",PROM.Estado)
+            print("--------------------")
+
+def BUSPEN(codpro):
+    global PROM,ALPR
+    tpro=os.path.getsize(AFPR)
+    b=False
+    ALPR.seek(0)
+    while ALPR.tell()<tpro and b==False:
+        pos=ALPR.tell()
+        PROM=pickle.load(ALPR)
+        if PROM.codPromo == codpro:
+            if PROM.Estado=="pendiente".ljust(10," "):
+                b=True
+    if b:
+        return pos
+    else:
+        return -1
+
+def MOSTRARPROMO(PROM):
+        print("--------------------")
+        print("Codigo de local:", PROM.codLocal)
+        print("Codigo de promo: ",PROM.codPromo)
+        print("Texto: ",PROM.textoPromo)
+        print("Fecha desde",PROM.fechaDesdePromo)
+        print("Fecha hasta: ",PROM.fechaHastaPromo)
+        print("Dias vigentes[1 esta vigente - 0 no lo esta]:", "| Lunes:",PROM.dias[0],"| Martes:",PROM.dias[1],"| Miercoles:",PROM.dias[2],"| Jueves:",PROM.dias[3],"| Viernes:",PROM.dias[4],"| Sabado:",PROM.dias[5],"| Domingo:",PROM.dias[6],"|")
+        print("Estado: ",PROM.Estado)
+        print("--------------------")
+
+def FORMATESTADO(PROM):
+    PROM.textoPromo=PROM.textoPromo.ljust(200," ")
+    PROM.Estado= PROM.Estado.ljust(10," ")
+
+def SOLICITUDES():
+    os.system("cls")
+    print("-Aprobar/ denegar solicitudes de descuento-")
+    tpr=os.path.getsize(AFPR)
+    if tpr != 0:
+        re=input("¿Desea ver el listado de promociones pendientes? (si/no):")
+        while re != "si" and re != "no":
+            re=input("-respuesta invalida- ¿Desea ver el listado de promociones pendientes? (si/no):")
+        if re == "si":
+            print("\n-Listado de promociones pendientes-")
+            LISPEND()
+        codpro=input("\n\nIngrese el codigo de la promoción que desea aceptar o rechazar o 0 para salir: ")
+        while validar(codpro,0,10000000):
+            codpro=input("-codigo invalido- ingrese nuevamente o ingrese 0 para salir: ")
+        codpro=int(codpro)
+        pen= BUSPEN(codpro)
+        while pen == -1 and codpro!=0:
+            codpro=input("el codigo no pertenece al de ninguna promocion pendiente, intente nuevamente o ingrese 0 para salir: ")
+            while validar(codpro,1,10000000):
+                codpro=input("codigo invalido- ingrese nuevamente o ingrese 0 para salir: ")
+            pen=BUSPEN(codpro)
+        if codpro!=0:
+            elec=input("Ingrese A si desea aceptar la promoción o R si desea rechazarla: ")
+            while elec != "A" and elec != "R":
+                elec=input("-respuesta invalida- Ingrese A si desea aceptar la promoción o R si desea rechazarla: ")
+            if elec=="A":
+                PROM.Estado="aprobada"
+                ALPR.seek(pen,0)
+                FORMATESTADO(PROM)
+                pickle.dump(PROM,ALPR)
+                print("Promocion aceptada: ")
+                MOSTRARPROMO(PROM)
+                ALPR.flush()
+            elif elec =="R":
+                PROM.Estado = "rechazada"
+                ALPR.seek(pen,0)
+                FORMATESTADO(PROM)
+                pickle.dump(PROM,ALPR)
+                print("Promocion rechazada: ")
+                MOSTRARPROMO(PROM)
+                ALPR.flush()
+            os.system("pause")
+    else:
+        print("\nNo hay promociones aun..")
+        os.system("pause")
+            
+def REPORTE():
+    limpiar()
+    print("-Informe de uso de promociones-")
+    t=os.path.getsize(AFPR)
+    tuso=os.path.getsize(AFUSO)
+    tl=os.path.getsize(AFL)
+    if t == 0 or tuso==0:
+        print("\nNo hay ninguna utilizada promocion aun...")
+        os.system("pause")
+    else:
+        fechaini=input("\nIngrese la fecha desde la cual desea ver el uso de promociones, en formato (DD-MM-AAAA): ")
+        validarformato(fechaini)
+        fechafin=input("\nIngrese la fecha hasta la cual desea ver el uso de promociones, en formato (DD-MM-AAAA): ")
+        validarformato(fechafin)
+        limpiar()
+        print("Informe de uso de promociones:")
+        print(f"\nFecha desde: {fechaini}          Fecha hasta: {fechafin}")
+        ALL.seek(0)
+        while ALL.tell()<tl:
+            RL=pickle.load(ALL)
+            ALPR.seek(0)
+            while ALPR.tell()<t:
+                PROM=pickle.load(ALPR)
+                if PROM.codLocal == RL.codlocal:
+                    print("---------------------------------------------------")
+                    print("Local",RL.codlocal,":",RL.nombreLocal)
+                    if PROM.Estado == "aprobada".ljust(10," "):
+                        if PROM.fechaDesdePromo <= fechaini:
+                            if PROM.fechaHastaPromo >= fechafin:
+                                        print("---------------------------------------------------")
+                                        print("Codigo de promo: ",PROM.codPromo)
+                                        print("                ")
+                                        print("Texto: ",PROM.textoPromo)
+                                        print(f"Fecha desde {PROM.fechaDesdePromo}       Fecha hasta: {PROM.fechaHastaPromo}")
+                                        print("........")
+                                        can=0
+                                        ALUSO.seek(0)
+                                        while ALUSO.tell()<tuso:
+                                            PRUSO=pickle.load(ALUSO)
+                                            if PRUSO.codPromo == PROM.codPromo:
+                                                if PRUSO.fechaUsoPromo>=fechaini and PRUSO.fechaUsoPromo<=fechafin:
+                                                    can=can+1
+                                        print("Cantidad de usos en el rango de fechas solicitado: ",can)
+                                        print("---------------------------------------------------")
+        os.system("pause")
+
+def OPCIONESADMIN():
+    if opadmin == 1:
+        GESTIONLOCALES()
+        subopcion=input("Ingrese una opcion [a-e]: ")
+        while subopcion != "e":
+            if subopcion == "a":
+                CREARLOCALES()
+                GESTIONLOCALES()
+                subopcion=input("Ingrese una opcion [a-e]: ")
+            elif subopcion == "b":
+                MODIFICARLOCAL()
+                GESTIONLOCALES()
+                subopcion=input("Ingrese una opcion [a-e]: ")
+            elif subopcion == "c":
+                ELIMINARLOCAL()
+                GESTIONLOCALES()
+                subopcion=input("Ingrese una opcion [a-e]: ")
+            elif subopcion=="d":
+                MAPALOCALES()
+                GESTIONLOCALES()
+                subopcion=input("Ingrese una opcion [a-e]: ")
+            else:
+                print("-opcion invalida-")
+                subopcion=input("Ingrese nuevamente una opcion [a-e]: ")
+        MENUADMIN()
+    elif opadmin == 2:
+        CREARDUENOS()
+        MENUADMIN()
+    elif opadmin == 3:
+        SOLICITUDES()
+        MENUADMIN()
+    elif opadmin == 4:
+        print("Diagramado en Chapin")
+        os.system("pause")
+        MENUADMIN()
+    elif opadmin == 5:
+        REPORTE()
+        MENUADMIN()
+    
+def FORMATEO():
+    RUS.nombreUsuario= RUS.nombreUsuario.ljust(10," ")
+    RUS.claveUsuario= RUS.claveUsuario.ljust(8," ")
+    RUS.tipoUsuario= RUS.tipoUsuario.ljust(20," ")
+
+def SEC(us, clave):
+    global AFUS, ALUS,RUS
+    f = os.path.getsize(AFUS)
+    t=False
+    ALUS.seek(0)
+    while ALUS.tell() < f and t==False:
+        pos = ALUS.tell()
+        RUS = pickle.load(ALUS)
+        if RUS.nombreUsuario == us and RUS.claveUsuario == clave:
+            t=True
+    if t:
+        return pos
+    else:
+        return -1
+
+
+def CLIENTE():
+    if opcli == 1:
+        BUSDESC()
+        MENUCLIEN()
+    elif opcli == 2:
+        SOLIDESC()
+        MENUCLIEN()
+    elif opcli == 3:
+        print("\n-Diagramado en chapin-")
+        os.system("pause")
+        MENUCLIEN()
+
+def INGRESAR():    
+    global aux,posic 
+    P=False
+    cont = 0
+    while cont < 3 and P==False:
+        us = input("\nIngrese nombre de usuario: ")
+        us=us.ljust(100," ")
+        clave = getpass.getpass("\nIngrese clave: ")
+        clave=clave.ljust(8," ")
+        posic = SEC(us, clave)
+        if posic != -1:
+            if RUS.tipoUsuario == "administrador".ljust(20," "):
+                MENUADMIN()
+                while opadmin != 0:
+                    OPCIONESADMIN()
+                P=True
+            elif RUS.tipoUsuario == "cliente".ljust(20," "):
+                MENUCLIEN()
+                while opcli != 0:
+                    CLIENTE()
+                P=True
+            elif RUS.tipoUsuario == "dueño de local".ljust(20," "):
+                MENUDUENO()
+                while opdue != 0:
+                    OPCDUENO()
+                P=True
+        if  posic == -1:
+            cont = cont + 1
+            if cont < 3:
+                print("Datos incorrectos, intente nuevamente (tiene hasta 3 intentos).")
+    if cont >= 3:
+        print("Ha superado el número máximo de intentos.")
+        aux=True
+        
+#validador de usuario
+def VAL(usu):
+    t=os.path.getsize(AFUS) 
+    n=False
+    ALUS.seek(0)
+    while ALUS.tell() < t and n==False:
+        pos=ALUS.tell()
+        RUS=pickle.load(ALUS) 
+        if RUS.nombreUsuario == usu:
+            n=True
+    if n:
+        return pos 
+    else:
+        return -1
+
+def TAMAÑO():
+    ALUS.seek(0)
+    pickle.load(ALUS)
+    t=ALUS.tell()
+    return t
+
+def REGISTARSE():
+    tamanoarch = os.path.getsize(AFUS)
+    tamreg = TAMAÑO()
+    regusu = input("\nIngrese el nombre de usuario con el que desea registrarse <hasta 100 caracteres> o * para volver: ")
+    while len(regusu) < 1 or len(regusu) > 100:
+        regusu = input("Incorrecto, ingrese nombre de usuario <hasta 100 caracteres> o * para volver: ")
+    regusu = regusu.ljust(100," ")
+    existe = VAL(regusu)
+    while existe != -1 and regusu != "*".ljust(100," "):
+        regusu = input("el nombre de usuario ya existe, ingrese otro o * para terminar: ")
+        regusu= regusu.ljust(100," ")
+        existe = VAL(regusu)
+    if regusu != "*".ljust(100," "):
+        RUS.nombreUsuario = regusu
+        RUS.claveUsuario = input("Ingrese una clave (debe tener entre 1 y 8 caracteres): ")
+        while len(RUS.claveUsuario) < 1 or len(RUS.claveUsuario) > 8:
+            RUS.claveUsuario = input("-clave invalida- la clave debe tener entre 1 y 8 caracteres, ingrese nuevamente: ")
+        RUS.tipoUsuario = 'cliente'
+        cantreg = tamanoarch // tamreg
+        RUS.codUsuario = cantreg + 1
+        FORMATEO()
+        pickle.dump(RUS, ALUS)
+        MOSTARUSUARIO()
+        ALUS.flush()
+        print("-registrado exitosamente-\n")
+        os.system("pause")
+
+
+#DUEÑOlOCAL
+def OPCDUENO():
+    if opdue == 1:
+        crear_descuentos()
+        MENUDUENO()
+    elif opdue == 2:
+        REPORTE()
+        MENUDUENO()
+    elif opdue == 3:
+        print("-Diagramado en chapin-")
+        os.system("pause")
+        MENUDUENO()
+
+def TAMAÑOPROM():
+    ALPR.seek(0)
+    pickle.load(ALPR)
+    t = ALPR.tell()
+    return t
+
+def listadoprom():
+    limpiar()
+    print("-Listado de promociones vigentes-")
+    fechahoy=datetime.now().strftime("%d-%m-%Y")
+    tl=os.path.getsize(AFL)
+    tp=os.path.getsize(AFPR)
+    if tp==0:
+        print("no hay promociones registradas aun...")
+    else:
+        ALUS.seek(posic,0)
+        RUS=pickle.load(ALUS)
+        ALL.seek(0)
+        while ALL.tell()<tl:
+            RL=pickle.load(ALL)
+            if RL.codUsuario == RUS.codUsuario:
+                if RL.estado =="A".ljust(1," "):
+                    loc=RL.codlocal
+                    ALPR.seek(0)
+                    while ALPR.tell()<tp:
+                        PROM=pickle.load(ALPR)
+                        if PROM.codLocal == loc:
+                            if PROM.fechaDesdePromo <= fechahoy:
+                                if PROM.fechaHastaPromo>= fechahoy:
+                                    print("--------------------")
+                                    print("codigo de local:", PROM.codLocal)
+                                    print("codigo de promo: ",PROM.codPromo)
+                                    print("texto: ",PROM.textoPromo)
+                                    print("fecha desde: ",PROM.fechaDesdePromo)
+                                    print("fecha hasta: ",PROM.fechaHastaPromo)
+                                    print("dias vigentes[1 esta vigente - 0 no lo esta]:", "Lunes:",PROM.dias[0],"| Martes:",PROM.dias[1],"| Miercoles:",PROM.dias[2],"| Jueves:",PROM.dias[3],"| Viernes:",PROM.dias[4],"| Sabado:",PROM.dias[5],"| Domingo:",PROM.dias[6])
+                                    print("estado: ",PROM.Estado)
+                                    print("--------------------")
+    
+def valcodprom(cod):
+    ALUS.seek(posic,0)
+    RUS=pickle.load(ALUS)
+    tal=os.path.getsize(AFL)  
+    ALL.seek(0)
+    q=False
+    while ALL.tell()<tal and q==False:
+        pos=ALL.tell()
+        RL=pickle.load(ALL)
+        if RL.codlocal == cod:
+            if RL.codUsuario == RUS.codUsuario:
+                q=True
+    if q:
+        return pos
+    else:
+        return -1
+    
+#Creacion de descuento
+def FORMATEOPROM():
+    PROM.textoPromo=PROM.textoPromo.ljust(200," ")
+    PROM.Estado= PROM.Estado.ljust(10," ")
+
+def validarformato(fecha):
+    ban=False
+    while not ban:
+        try:
+            datetime.strptime(fecha,'%d-%m-%Y')
+            ban = True
+        except ValueError:
+            fecha=input("Formato incorrecto, intentelo nuevamente en el formato DD-MM-AAAA: ")
+      
+def fecha():
+    global fechahasta,fechadesde
+    V=False
+    fechahoy=datetime.now().strftime("%d-%m-%Y")
+    while V==False:
+        fechadesde=input('Ingrese la fecha de inicio de la promocion en el formato DD-MM-AAAA: ')
+        validarformato(fechadesde)
+        while fechadesde<fechahoy:
+            fechadesde=input("ingrese nuevamente la fecha(recuerde q debe ser menor a la fecha de hoy): ")
+            validarformato(fechadesde)
+        fechahasta = input('Ingrese la fecha hasta la cual sera valida la promocion en el formato DD-MM-AAAA (debe ser mayor o igual a la fecha de inicio): ')       
+        validarformato(fechahasta)
+        while fechahasta<fechadesde:
+            fechahasta=input("ingrese nuevamente la fecha(recuerde q debe ser mayor a la fecha de inicio): ")
+            validarformato(fechahasta)
+        print("-Fechas validas-")
+        V=True
+    
+def valprom(dia):
+    while dia != "1" and dia != "0":
+        return False
+    return True
+
+def DIAS():
+    global PROM
+    print("Indique los dias en los que sea valida la promo con (1 si es valida/0 si no es valida)")
+    lun=input("Lunes[1/0]: ")
+    while valprom(lun)==False:
+        lun=input("-invalido- Lunes[1/0]: ")
+    mar=input("Martes[1/0]: ")
+    while valprom(mar)==False:
+        mar=input("-invalido-Martes[1/0]: ")
+    mie=input("Miercoles[1/0]: ")
+    while valprom(mie)==False:
+        mie=input("-invalido-Miercoles[1/0]: ")
+    jue=input("Jueves[1/0]: ")
+    while valprom(jue)==False:
+        jue=input("-invalido-Jueves[1/0]: ")
+    vie=input("Viernes [1/0]: ")
+    while valprom(vie)==False:
+        vie=input("-invalido-Viernes [1/0]: ")
+    sab=input("Sabado[1/0]: ")
+    while valprom(sab)==False:
+        sab=input("-invalido-Sabado[1/0]: ")
+    dom=input("Domingo[1/0]: ")
+    while valprom(dom)==False:
+        dom=input("-invalido-Domingo[1/0]: ")
+    PROM.dias[0]=lun
+    PROM.dias[1]=mar
+    PROM.dias[2]=mie
+    PROM.dias[3]=jue
+    PROM.dias[4]=vie
+    PROM.dias[5]=sab
+    PROM.dias[6]=dom 
+        
+def crear_descuentos():
+    os.system("cls")
+    re=input("¿desea ver el listado de las promociones vigentes? (si/no)")
+    while re != "si" and re != "no":
+        re=input("-respuesta invalida- ¿desea ver el linstado de las promociones vigentes? (si/no)")
+    if re == "si":
+        listadoprom()
+    t=os.path.getsize(AFL)
+    if t != 0:
+        codig=input("\ningrese el cod del local al que corresponde la promocion a crear: ")
+        while validar(codig,0,10000000):
+            codig=input("Incorrecto, ingrese nuevamente el codigo de local o 0 para terminar: ")
+        codig=int(codig)
+        if codig != 0:
+            q=valcodprom(codig)
+            while q ==-1 and codig != 0:
+                codig=("el cod no existe o no corresponde a su usuario, intente nuevamente o ingrese 0 para terminar: ")
+                while validar(codig,1,10000000):
+                    codig=input("Incorrecto, ingrese nuevamente el codigo de local: ")
+                codig=int(codig)
+                q=valcodprom(codig)
+            if codig != 0:
+                txtPromo = (input("Ingrese el texto del nuevo descuento (o ingrese '*' para volver al menú principal): ")).lower()
+                while len(txtPromo) < 1 or len(txtPromo) > 200:
+                        txtPromo = input("Cantidad de caracteres inválida, ingrese la promoción nuevamente (hasta 200 caracteres): ")
+                while txtPromo != "*": 
+                        tamprom = os.path.getsize(AFPR)   
+                        if tamprom == 0:
+                                cantreg=0                               
+                        else:
+                            tamreg = TAMAÑOPROM()
+                            cantreg=tamprom//tamreg   
+                        fecha()
+                        DIAS()
+                        ALPR.seek(tamprom,0)
+                        PROM.codLocal =codig
+                        PROM.codPromo = cantreg + 1
+                        PROM.textoPromo = str(txtPromo)
+                        PROM.fechaDesdePromo = fechadesde
+                        PROM.fechaHastaPromo = fechahasta
+                        PROM.Estado="pendiente"
+                        FORMATEOPROM()
+                        pickle.dump(PROM, ALPR)
+                        ALPR.flush()
+                        limpiar()
+                        print("\n--------------------")
+                        print("-promocion ingresada-")
+                        print("codigo de local:", PROM.codLocal)
+                        print("codigo de promo: ",PROM.codPromo)
+                        print("texto: ",PROM.textoPromo)
+                        print("fecha desde",PROM.fechaDesdePromo)
+                        print("fecha hasta: ",PROM.fechaHastaPromo)
+                        print("dias vigentes[1 esta vigente - 0 no lo esta]:", "Lunes:",PROM.dias[0],"| Martes:",PROM.dias[1],"| Miercoles:",PROM.dias[2],"| Jueves:",PROM.dias[3],"| Viernes:",PROM.dias[4],"| Sabado:",PROM.dias[5],"| Domingo:",PROM.dias[6])
+                        print("estado: ",PROM.Estado)
+                        print("--------------------")
+                        txtPromo = (input("\n\nSi desea ingresar otro descuento al local ingrese su texto o ingrese '*' para volver al menú principal: ")).lower()
+                        while len(txtPromo) < 1 or len(txtPromo) > 200:
+                            txtPromo = input("Cantidad de caracteres inválida, ingrese el texto de la promoción nuevamente (hasta 200 caracteres) o * para terminar : ")           
+    else:
+        print("No existe ningun local al cual asignarle promocion...")
+    os.system('pause')
+    
+
+
+# ---------- CLIENTE ------------------------
+ 
+def BCODLOC(codlocal):
+    t = os.path.getsize(AFPR)
+    y=False
+    ALPR.seek(0)
+    while ALPR.tell() < t and y==False:
+        pos = ALPR.tell()
+        PROM = pickle.load(ALPR)
+        if PROM.codLocal == codlocal:
+            if PROM.Estado == "aprobada".ljust(10," "):
+                y=True
+    if y:
+        return pos
+    else:
+        return -1
+
+def validarfecha():
+    ahora = datetime.now().strftime("%x")
+    while ban:
+        try:
+            fechadesde = input('Ingrese la fecha de inicio de la promocion en el formato DD-MM-AAAA: ')
+            datetime.strptime(fechadesde, '%d-%m-%Y')
+            if fechadesde>=ahora:
+                print("-fecha valida-")
+                ban = False
+        except ValueError or fechadesde<ahora:
+            print("Formato incorrecto, intentelo nuevamente en el formato DD-MM-AAAA: ")
+
+def BUSDESC():
+    m=False
+    fhoy=datetime.now().strftime("%d-%m-%Y")
+    limpiar()
+    print("---- Buscar descuentos en local ----")
+    t = os.path.getsize(AFPR)
+    if t !=0:
+        codl = input("Ingrese un codigo de local o 0 para terminar: ")
+        while validar(codl, 0, 100000):
+            codl = input("Codigo invalido ingrese un codigo de local o 0 para terminar: ")
+        codl = int(codl)
+        pos = BCODLOC(codl)
+        while pos == -1 and codl!=0:
+            codl=input("el codigo no existe, ingrese nuevamente o ingrese 0 para terminar: ")
+            while validar(codl, 0, 100000):
+                codl = input("Codigo invalido Ingrese un codigo de local o 0 para terminar: ")
+            codl = int(codl)
+            pos = BCODLOC(codl)
+        while codl != 0 and m==False:
+                fechabus=input("Ingrese la fecha de descuento (recuerde que debe ser mayor o igual a la fecha del sistema): ")
+                validarformato(fechabus)
+                divfecha=fechabus.split("-")
+                dia=int(divfecha[0])
+                mes=int(divfecha[1])
+                anio=int(divfecha[2])
+                fech=datetime(anio,mes,dia)
+                ds=fech.weekday()
+                ALPR.seek(pos,0)
+                PROM=pickle.load(ALPR)
+                while fechabus<fhoy:
+                    fechabus=input("Ingrese nuevamente la fecha(debe ser mayor o igual a la fecha de hoy): ")
+                    validarformato(fechabus)
+                while PROM.dias[ds] == "0" and fechabus!= "*": 
+                    fechabus=input("-la promocion no es valida en esta fecha- ingrese otra fecha o * para terminar: ")
+                    if fechabus != "*":
+                        validarformato(fechabus)
+                        divfecha=fechabus.split("-")
+                        dia=int(divfecha[0])
+                        mes=int(divfecha[1])
+                        anio=int(divfecha[2])
+                        fech=datetime(anio,mes,dia)
+                        ds=fech.weekday()
+                        while fechabus<fhoy:
+                            fechabus=input("Ingrese nuevamente la fecha(debe ser mayor o igual a la fecha de hoy): ")
+                            validarformato(fechabus)
+                else:
+                    if fechabus != "*":
+                        ALPR.seek(0)
+                        c=0
+                        while ALPR.tell() < t:
+                                PROM=pickle.load(ALPR)
+                                if PROM.codLocal ==codl:
+                                    if (fechabus >= PROM.fechaDesdePromo and fechabus <= PROM.fechaHastaPromo):
+                                        c=c+1
+                                        print("-----------------------------------------------")   
+                                        print("Codigo promocion:",PROM.codPromo)
+                                        print("Texto: ", PROM.textoPromo)
+                                        print(f"Fecha desde: {PROM.fechaDesdePromo}      Fecha hasta: {PROM.fechaHastaPromo}")
+                                        print("-----------------------------------------------")   
+                        if c==0:
+                            print("no existen promociones en ese rango de fechas...")
+                        codl = input("Ingrese un codigo de local o 0 para terminar: ")
+                        while validar(codl, 0, 100000):
+                            codl = input("Ingrese un codigo de local: ")
+                        codl = int(codl)
+                        pos = BCODLOC(codl)
+                        while pos == -1 and codl!=0:
+                            codl=input("el codigo no existe, ingrese nuevamente o ingrese 0 para terminar: ")
+                            while validar(codl, 0, 100000):
+                                codl = input("Codigo invalido Ingrese un codigo de local o 0 para terminar: ")
+                            codl = int(codl)
+                            pos = BCODLOC(codl)
+                    else:
+                        m=True
+    else:
+        print("no hay ninguna promocion disponible...")
+        os.system("pause")
+    
+def BUSDES(codp):
+    t = os.path.getsize(AFPR)
+    ALPR.seek(0)
+    fechahoy=datetime.now().strftime("%d-%m-%Y")
+    w=False
+    while ALPR.tell() < t and w==False:
+        pos = ALPR.tell()
+        PROM = pickle.load(ALPR)
+        print(PROM.codPromo)
+        if PROM.codPromo== codp:
+            print(PROM.fechaDesdePromo)
+            if PROM.fechaDesdePromo <= fechahoy:
+                if PROM.fechaHastaPromo>= fechahoy:
+                    w=True
+    if w:
+        return fechahoy
+    else:
+        return -1
+    
+def MOSDESC():
+    rta=input("Desea ver una lista de los descuentos? (si/no): ")  
+    while rta != 'si' and rta != 'no':
+        rta=input("opcion invalida, vuelve a intentarlo (si/no): ")
+    if rta == 'si':
+        t = os.path.getsize(AFPR)
+        if t == 0:
+            "No hay descuentoa cargados.."
+        else:
+            ALPR.seek(0)
+            c = 0
+            while ALPR.tell() < t:
+                PROM = pickle.load(ALPR)
+                if PROM.Estado == 'aprobada'.ljust(10," "):
+                    if (fechahoy >= PROM.fechaDesdePromo and fechahoy <= PROM.fechaHastaPromo):
+                        c = c+1
+                        print("\nCodigo Promocion: ",PROM.codPromo)
+                        print("Texto promocion: ",PROM.textoPromo)
+                        print("Fecha desde: ",PROM.fechaDesdePromo)
+                        print("Fecha hasta: ",PROM.fechaHastaPromo)
+                        linea()
+            if c==0:
+                print("no hay promociones disponibles..")
+
+def BUSCARDES(codp):
+    w = False
+    t = os.path.getsize(AFPR)   
+    ALPR.seek(0,0)  
+    while ALPR.tell() < t:
+        pos = ALPR.tell()
+        PROM = pickle.load(ALPR)
+        if PROM.codPromo== codp:
+            w=True
+    if w:
+        return pos
+    else:
+        return -1         
+                
+                
+def SOLIDESC():
+    global PRUSO, fechahoy
+    limpiar()
+    fechahoy=datetime.now().strftime("%d-%m-%Y")
+    divfecha=fechahoy.split("-")
+    dia=int(divfecha[0])
+    mes=int(divfecha[1])
+    anio=int(divfecha[2])
+    fech=datetime(anio,mes,dia)
+    wd=fech.weekday()
+    
+
+    print('--- Solicitud de descuento ---') 
+    MOSDESC()
+    tupr=os.path.getsize(AFUSO) 
+    codp = input('\nIngrese el codigo de la promocion o 0 para finalizar: ')
+    while validar(codp,0,1000000):
+        codp = input('Incorrecto, ingrese otro codigo o 0 para finalizar: ')
+    codp = int(codp)
+    if codp!= 0:
+        val = BUSCARDES(codp)
+        while val == -1:
+            codp = input('-el codigo no existe o no es  valido- Ingrese otro codigo de promocion o 0 para finalizar: ')
+            while validar(codp,0,1000000):
+                codp = input('Incorrecto, ingrese otro codigo: ')
+            codp = int(codp)
+            val=BUSCARDES(codp)
+       
+        if codp!=0:
+            if val != -1:
+                ALPR.seek(val,0)
+                PROM = pickle.load(ALPR)
+                if PROM.Estado == 'aprobada'.ljust(10," "):
+                    if PROM.dias[wd]=="1":
+                        if (fechahoy >= PROM.fechaDesdePromo and fechahoy <= PROM.fechaHastaPromo):
+                            ALUS.seek(posic,0)
+                            RUS=pickle.load(ALUS)
+                            codclien=RUS.codUsuario
+                            ALUSO.seek(tupr,0)
+                            PRUSO.codPromo = codp
+                            PRUSO.fechaUsoPromo = fechahoy
+                            PRUSO.codCliente= codclien
+                            pickle.dump(PRUSO, ALUSO)
+                            ALUSO.flush()
+                            print('Solicitud de descuento realizado con exito.')
+                        else:
+                            print("la promocion no esta habilitada en el dia de hoy")
+                    else:
+                        print("la promocion no esta habilitada este dia de semana")
+                else:
+                    print("no puede utilizar esta promocion ya que no esta habilitada")          
+    os.system('pause')          
+    
+
+#DECLARATIVA
+RUS=usuarios()
+PROM = promociones()
+PRUSO = usoPromociones()
+RL= locales()
+#arreglo de registros
+rubros =[None] * 3
+for i in range (3):
+    rubros[i]=RUBROS()
+
+tl=os.path.getsize(AFL)
+if tl==0:
+    rubros[0].cant = 0
+    rubros[1].cant = 0
+    rubros[2].cant = 0
+    rubros[0].rub ="comida"
+    rubros[1].rub ="perfumeria"
+    rubros[2].rub ="indumentaria"
+else:  
+    rubros[0].rub ="comida"
+    rubros[1].rub ="perfumeria"
+    rubros[2].rub ="indumentaria"
+    rubros[0].cant = calculo("comida")
+    rubros[1].cant = calculo("perfumeria")
+    rubros[2].cant = calculo("indumentaria")
+ORDENARRUB(rubros,3)
+
+#INGRESAR USUARIO PREDETERMINADO
+tam=os.path.getsize(AFUS)
+if tam == 0:   
+    RUS.codUsuario = 1
+    RUS.nombreUsuario = "admin@shopping.com".ljust(100," ")
+    RUS.claveUsuario = "12345".ljust(8," ")
+    RUS.tipoUsuario = "administrador".ljust(20," ")
+    ALUS.seek(0)
+    pickle.dump(RUS, ALUS)
+    ALUS.flush()
+
+#PROGRAMA PRINCIPAL
+aux=False 
+while aux==False:
+    MENUINICIAL()
+    if op==1:
+        limpiar()
+        print("-Ingresar como usuario registrado-")
+        INGRESAR()
+    if op==2:
+        limpiar()
+        print("-Registrarse como cliente-")
+        REGISTARSE()
+        aux=False
+    if op ==3:
+        aux = True
+ALUS.close()
+ALL.close()
+ALPR.close()
+ALUSO.close()
